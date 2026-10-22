@@ -1,0 +1,54 @@
+services:
+  # ---------------------------------
+  # SERVICE 1: PHP (Laravel Octane + RoadRunner)
+  # ---------------------------------
+  api-app:
+    build: .
+    container_name: league_api_app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - .:/var/www
+    env_file:
+      - .env
+    command: sh -c "composer install --no-interaction && npm install && npm run build && php artisan storage:link && ./vendor/bin/rr get-binary && php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000 --rpc-port=6001"
+    depends_on:
+      - db
+
+  # ---------------------------------
+  # SERVICE 2: DATABASE (PostgreSQL)
+  # ---------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: league_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-league_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: ${DB_DATABASE:-league_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  # ---------------------------------
+  # SERVICE 3: PGADMIN (Optional database management)
+  # ---------------------------------
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: league_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "${PGADMIN_PORT:-8080}:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - db
+
+volumes:
+  postgres-data:
+  pgadmin-data:
